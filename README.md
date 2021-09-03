@@ -1,4 +1,6 @@
 # LibDumper
+Note: This is created by BryanGIG but he have deleted his account :(
+
 This Project Is Using For Make You Easy Dump Lib From The Memory
 
 # Changelog 3.5 :
