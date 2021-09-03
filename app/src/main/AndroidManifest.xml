@@ -13,9 +13,8 @@
         android:supportsRtl="true"
         android:extractNativeLibs="true"
         android:requestLegacyExternalStorage="true"
-        android:theme="@style/Theme.LibDumper">
-        <activity android:name=".MainActivity"
-            android:screenOrientation="portrait">
+        android:theme="@android:style/Theme.Black">
+        <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

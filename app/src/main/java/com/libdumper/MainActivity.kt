@@ -1,6 +1,7 @@
 package com.libdumper
 
 import android.Manifest
+import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
@@ -10,79 +11,69 @@ import android.net.Uri
 import android.os.*
 import android.util.Log
 import android.widget.ScrollView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import com.kmrite.Tools
+import com.libdumper.Utils.TAG
 import com.libdumper.databinding.ActivityMainBinding
+import com.libdumper.dumper.Dumper
+import com.libdumper.root.RootServices
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 
-
-class MainActivity : AppCompatActivity(), Handler.Callback {
+class MainActivity : Activity(), Handler.Callback {
     lateinit var bind: ActivityMainBinding
-    private var consoleList: AppendCallbackList = AppendCallbackList()
     private val myMessenger = Messenger(Handler(Looper.getMainLooper(), this))
     var remoteMessenger: Messenger? = null
     private var serviceTestQueued = false
     private var conn: MSGConnection? = null
-
-    companion object {
-        const val TAG = "LibDumper"
+    private var nativeDir = ""
+    private var needFix: Boolean = false
+    private fun initRoot() {
+        if (Shell.rootAccess()) {
+            if (remoteMessenger == null) {
+                serviceTestQueued = true
+                val intent = Intent(this, RootServices::class.java)
+                conn = MSGConnection()
+                RootService.bind(intent, conn!!)
+                return
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Shell.rootAccess()
         bind = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(bind.root)
-        reqStorageLD()
-        bind.dumpUE4.setOnClickListener {
-            runNative(
-                if (bind.libName.text.isNullOrBlank()) {
-                    "libUE4.so"
+        initRoot()
+        nativeDir = applicationInfo.nativeLibraryDir
+
+        with(bind) {
+            setContentView(root)
+            beginDump.setOnClickListener {
+                if (pkg.text != null) {
+                    if (metadata.isChecked)
+                        runNative("global-metadata.dat")
+
+                    needFix = autoFix.isChecked
+                    runNative(
+                        if (libName.text.isNullOrBlank())
+                            "libil2cpp.so"
+                        else
+                            libName.text.toString()
+                    )
                 } else {
-                    bind.libName.text.toString()
+                    consoleList.add("put pkg name!")
                 }
-            )
-        }
-        bind.dumpil2cpp.setOnClickListener {
-            if (bind.metadata.isChecked) {
-                runNative("global-metadata.dat")
             }
-
-            runNative(
-                if (bind.libName.text.isNullOrBlank()) {
-                    "libil2cpp.so"
-                } else {
-                    bind.libName.text.toString()
-                }
-            )
-        }
-        bind.github.setOnClickListener {
-            startActivity(
-                Intent(
-                    ACTION_VIEW,
-                    Uri.parse("https://github.com/MrPictYT-art/LibDumper")
+            github.setOnClickListener {
+                startActivity(
+                    Intent(
+                        ACTION_VIEW,
+                        Uri.parse("https://github.com/BryanGIG/LibDumper")
+                    )
                 )
-            )
+            }
         }
     }
 
-    private fun reqStorageLD() {
-        val permission = ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                10
-            )
-        }
-    }
 
     override fun handleMessage(msg: Message): Boolean {
         val dump = msg.data.getString("result")
@@ -91,30 +82,18 @@ class MainActivity : AppCompatActivity(), Handler.Callback {
     }
 
     private fun runNative(file: String) {
-        if (bind.pkg.text != null) {
-            if (Shell.rootAccess()) {
-                tryBindService(file)
-            } else {
-                bind.console.text = Tools.dumpFile(bind.pkg.text.toString(), file)
-            }
+        val pkg = bind.pkg.text.toString()
+        if (Shell.rootAccess()) {
+            sendRequest(pkg, file)
         } else {
-            Toast.makeText(this, "put pkg name please", Toast.LENGTH_SHORT).show()
+            consoleList.add(Dumper(nativeDir,pkg, file).dumpFile(needFix))
         }
     }
 
-    private fun tryBindService(file: String) {
-        if (remoteMessenger == null) {
-            serviceTestQueued = true
-            val intent = Intent(this, RootServices::class.java)
-            conn = MSGConnection(bind.pkg.text.toString(), file)
-            RootService.bind(intent, conn!!)
-            return
-        }
-        testService(bind.pkg.text.toString(), file)
-    }
-
-    private fun testService(pkg: String, file: String) {
-        val message: Message = Message.obtain(null, RootServices.MSG_GETINFO)
+    private fun sendRequest(pkg: String, file: String) {
+        val message: Message = Message.obtain(null, Utils.MSG_GETINFO)
+        message.data.putBoolean("fixMe", needFix)
+        message.data.putString("native",nativeDir)
         message.data.putString("pkg", pkg)
         message.data.putString("file_dump", file)
         message.replyTo = myMessenger
@@ -125,13 +104,12 @@ class MainActivity : AppCompatActivity(), Handler.Callback {
         }
     }
 
-    inner class MSGConnection(private var pkg: String, var lib: String) : ServiceConnection {
+    inner class MSGConnection : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Log.d(TAG, "service onServiceConnected")
             remoteMessenger = Messenger(service)
             if (serviceTestQueued) {
                 serviceTestQueued = false
-                testService(pkg, lib)
             }
         }
 
@@ -141,7 +119,7 @@ class MainActivity : AppCompatActivity(), Handler.Callback {
         }
     }
 
-    inner class AppendCallbackList : CallbackList<String?>() {
+    private var consoleList = object : CallbackList<String?>() {
         override fun onAddElement(s: String?) {
             bind.console.append(s)
             bind.console.append("\n")
@@ -151,8 +129,8 @@ class MainActivity : AppCompatActivity(), Handler.Callback {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (conn != null) {
-            RootService.unbind(conn!!)
+        conn?.let {
+            RootService.unbind(it)
         }
     }
 }

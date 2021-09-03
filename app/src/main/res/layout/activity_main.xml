@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -45,10 +44,7 @@
             android:layout_weight="1"
             android:autofillHints="@string/package_name"
             android:hint="@string/package_name"
-            android:inputType="text"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/textView2" />
+            android:inputType="text" />
     </LinearLayout>
 
     <LinearLayout
@@ -64,10 +60,7 @@
             android:layout_weight="1"
             android:autofillHints="@string/package_name"
             android:hint="@string/libname_leave_blank_if_wanna_use_default"
-            android:inputType="text"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/textView2" />
+            android:inputType="text" />
     </LinearLayout>
 
     <LinearLayout
@@ -81,8 +74,16 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dump_metadata" />
+            android:text="@string/dump_metadata"
+            android:textColor="@color/black" />
 
+        <CheckBox
+            android:id="@+id/autoFix"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/fix_elf_dump"
+            android:textColor="@color/black" />
     </LinearLayout>
 
     <LinearLayout
@@ -92,21 +93,12 @@
         android:orientation="horizontal">
 
         <Button
+            android:id="@+id/beginDump"
             style="?android:attr/buttonBarButtonStyle"
-            android:id="@+id/dumpUE4"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dump_lib_ue4" />
-
-        <Button
-            style="?android:attr/buttonBarButtonStyle"
-            android:id="@+id/dumpil2cpp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="2dp"
-            android:layout_weight="1"
-            android:text="@string/dump_lib_il2cpp" />
+            android:text="@string/dump" />
 
     </LinearLayout>
 
